@@ -1,0 +1,134 @@
+'use strict';
+const Discord = require("discord.js"); // Used for interfacing with Discord
+const client = new Discord.Client(); // Used for interacting with Discord
+const config = require("./config.json"); // config file containing necessary information to function
+const Parser = require('rss-parser'); // Used for parsing RSS feeds
+const cheerio = require('cheerio'); // Used for parsing HTML-like code
+
+module.exports = class DiscordBot {
+
+    constructor() {
+        this.discordEventList = [];
+        this.numOfEvents = 100;
+    }
+
+    /** fetchMeetupEvents reads the RSS feed for the given Meetup group URL in config.json
+     *  and adds it to an array that will be passed to addDiscordEvents. The array will only
+     *  contain events that are not yet in the specified guildID's channelName.
+     * @param err Whether an Error occurred before calling this function.
+     * @param callback The Function to call once we are done processing.
+     */
+    fetchMeetupEvents(err, callback) {
+        if (err !== null) {
+            console.log(err);
+            return;
+        }
+        new Parser().parseURL(config.MEETUP_RSS_FEED).then(feed => {
+            let meetupEvents = [];
+            feed.items.forEach(item => {
+                // Parse item's content to get the event's start date and time.
+                let $ = cheerio.load(item.content);
+                let regPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (January|February|March|April|May|June|July|August|September|October|November|December) (\d+) at (\d+):(0\d|\d+) ([AP]M)/;
+                $('p').each(function(i, el) {
+                    if (el.firstChild !== null)
+                        if (el.firstChild.data != undefined)
+                            if (el.firstChild.data.match(regPattern) !== null) {
+                                let datePieces = el.firstChild.data.match(regPattern);
+                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
+                                if (date.getDate() == new Date().getDate())
+                                    meetupEvents.push(item);
+                            }
+                });
+            });
+            if (meetupEvents.length != 0)
+                this.addDiscordEvents(err, meetupEvents, callback);
+            else {
+                // Print message notifying no new events with current date and time.
+                let date_ob = new Date();
+    
+                // current date
+                // adjust 0 before single digit date
+                let day = ("0" + date_ob.getDate()).slice(-2);
+    
+                // current month
+                let month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+    
+                // current year
+                let year = date_ob.getFullYear();
+    
+                // current hours
+                let hours = date_ob.getHours();
+    
+                // current minutes
+                let minutes = date_ob.getMinutes();
+    
+                // current seconds
+                let seconds = date_ob.getSeconds();
+                console.log(year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds + ' Nothing new at this time.');
+                callback();
+            }
+        });
+    }
+
+    /** addDiscordEvents writes messages from the passed-in eventList array of new events read
+     *  from the given Meetup group RSS feed in config.json.
+     *  Precondition: The events do not exist in discordEventList.
+     * @param err Whether an Error occurred before processing this function.
+     * @param eventList An Array containing a list of new events read from the Meetup RSS feed
+     * (read from config.json).
+     * @param callback The Function to call once we are done processing.
+     */
+    addDiscordEvents(err, eventList, callback) {
+        if (err !== null) {
+            console.log(err);
+            return;
+        }
+
+        var bar = new Promise((resolve, reject) => {
+            eventList.forEach(e => {
+                let output = e.title.trim() + '\n\n';
+
+                let $ = cheerio.load(e.content);
+                let regPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (January|February|March|April|May|June|July|August|September|October|November|December) (\d+) at (\d+):(0\d|\d+) ([AP]M)/;
+                $('p').each(function(i, el) {
+                    if (el.firstChild !== null)
+                        if (el.firstChild.data != undefined)
+                            if (
+                                (el.firstChild.data != e.guid &&
+                                el.firstChild.data.match(/\d+/) === null &&
+                                el.firstChild.data.match('Introverts Hangout') === null) ||
+                                el.firstChild.data.match(regPattern) !== null
+                            )
+                                output += el.firstChild.data + '\n';
+                });
+
+                output += '\n' + e.guid;
+
+                let channel = client.channels.cache.get(config.CHANNEL_ID);
+                if (channel != undefined) {
+                    console.log('Writing event "' + e.title.trim() + '"\n');
+                    channel.send(output);
+                }
+            })
+            resolve();
+        });
+
+        bar.then(() => {callback()});
+    }
+
+    /** run is used to start the DiscordBot.
+     */
+    run() {
+        // Log client in to MeetupEventFetcher Discord bot.
+        client.login(config.BOT_TOKEN).then(
+            // Check for new Meetup events.
+            client.once('ready', () => {this.fetchMeetupEvents(null, this.end);})
+        );
+    }
+
+    /** end is used to stop the DiscordBot.
+     */
+    end() {
+        client.destroy();
+    }
+}
