@@ -16,15 +16,16 @@ module.exports = class DiscordBot {
      *  and adds it to an array that will be passed to addDiscordEvents. The array will only
      *  contain events that are not yet in the specified guildID's channelName.
      * @param err Whether an Error occurred before calling this function.
-     * @param callback The Function to call once we are done processing.
      */
-    fetchMeetupEvents(err, callback) {
+    fetchMeetupEvents(err) {
         if (err !== null) {
             console.log(err);
             return;
         }
+
         new Parser().parseURL(config.MEETUP_RSS_FEED).then(feed => {
             let meetupEvents = [];
+
             feed.items.forEach(item => {
                 // Parse item's content to get the event's start date and time.
                 let $ = cheerio.load(item.content);
@@ -40,8 +41,9 @@ module.exports = class DiscordBot {
                             }
                 });
             });
+
             if (meetupEvents.length != 0)
-                this.addDiscordEvents(err, meetupEvents, callback);
+                this.addDiscordEvents(err, meetupEvents);
             else {
                 // Print message notifying no new events with current date and time.
                 let date_ob = new Date();
@@ -65,7 +67,6 @@ module.exports = class DiscordBot {
                 // current seconds
                 let seconds = date_ob.getSeconds();
                 console.log(year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds + ' Nothing new at this time.');
-                callback();
             }
         });
     }
@@ -76,16 +77,16 @@ module.exports = class DiscordBot {
      * @param err Whether an Error occurred before processing this function.
      * @param eventList An Array containing a list of new events read from the Meetup RSS feed
      * (read from config.json).
-     * @param callback The Function to call once we are done processing.
      */
-    addDiscordEvents(err, eventList, callback) {
+    addDiscordEvents(err, eventList) {
         if (err !== null) {
             console.log(err);
             return;
         }
 
-        var bar = new Promise((resolve, reject) => {
-            eventList.forEach(e => {
+        let count = 0;
+        eventList.forEach(e => {
+            let processList = async (e) => {
                 let output = e.title.trim() + '\n\n';
 
                 let $ = cheerio.load(e.content);
@@ -107,13 +108,15 @@ module.exports = class DiscordBot {
                 let channel = client.channels.cache.get(config.CHANNEL_ID);
                 if (channel != undefined) {
                     console.log('Writing event "' + e.title.trim() + '"\n');
-                    channel.send(output);
+                    await channel.send(output);
                 }
-            })
-            resolve();
-        });
 
-        bar.then(() => {callback()});
+                count++;
+                if (count == eventList.length)
+                    this.end();
+            }
+            processList(e);
+        });
     }
 
     /** run is used to start the DiscordBot.
@@ -122,8 +125,10 @@ module.exports = class DiscordBot {
         // Log client in to MeetupEventFetcher Discord bot.
         client.login(config.BOT_TOKEN).then(
             // Check for new Meetup events.
-            client.once('ready', () => {this.fetchMeetupEvents(null, this.end);})
+            client.once('ready', () => {this.fetchMeetupEvents(null);})
         );
+
+        //setTimeout(() => {this.end();}, 5000);
     }
 
     /** end is used to stop the DiscordBot.
