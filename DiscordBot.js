@@ -36,16 +36,15 @@ module.exports = class DiscordBot {
                             if (el.firstChild.data.match(regPattern) !== null) {
                                 let datePieces = el.firstChild.data.match(regPattern);
                                 let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
-                                if (date.getDate() == new Date().getDate())
+                                if (date == new Date())
                                     meetupEvents.push(item);
                             }
                 });
             });
 
-            if (meetupEvents.length != 0)
+            if (meetupEvents.length != 0) // Output new events.
                 this.addDiscordEvents(err, meetupEvents);
-            else {
-                // Print message notifying no new events with current date and time.
+            else { // Print message notifying no new events with current date and time.
                 let date_ob = new Date();
     
                 // current date
@@ -127,8 +126,6 @@ module.exports = class DiscordBot {
             // Check for new Meetup events.
             client.once('ready', () => {this.fetchMeetupEvents(null);})
         );
-
-        //setTimeout(() => {this.end();}, 5000);
     }
 
     /** end is used to stop the DiscordBot.
