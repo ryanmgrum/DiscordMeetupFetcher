@@ -66,6 +66,7 @@ module.exports = class DiscordBot {
                 // current seconds
                 let seconds = date_ob.getSeconds();
                 console.log(year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds + ' Nothing new at this time.');
+                this.end();
             }
         });
     }
