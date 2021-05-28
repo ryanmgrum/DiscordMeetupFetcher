@@ -103,7 +103,7 @@ module.exports = class DiscordBot {
                                 if (
                                     (child.type == 'text' &&
                                      child.data != e.guid &&
-                                     child.data.match(/^\d+/) === null &&
+                                     child.data.match(/^\d+$/) === null &&
                                      child.data.match('Introverts Hangout') === null
                                     ) ||
                                     child.data.match(regPattern) !== null
