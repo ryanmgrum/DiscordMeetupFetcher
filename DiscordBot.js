@@ -43,7 +43,12 @@ module.exports = class DiscordBot {
             });
 
             if (meetupEvents.length != 0) // Output new events.
-                this.addDiscordEvents(err, meetupEvents);
+                try {
+                    this.addDiscordEvents(err, meetupEvents);
+                } catch (error) {
+                    console.log(err);
+                    this.end();
+                }
             else { // Print message notifying no new events with current date and time.
                 let date_ob = new Date();
     
@@ -92,15 +97,19 @@ module.exports = class DiscordBot {
                 let $ = cheerio.load(e.content);
                 let regPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (January|February|March|April|May|June|July|August|September|October|November|December) (\d+) at (\d+):(0\d|\d+) ([AP]M)/;
                 $('p').each(function(i, el) {
-                    if (el.firstChild !== null)
-                        if (el.firstChild.data != undefined)
-                            if (
-                                (el.firstChild.data != e.guid &&
-                                el.firstChild.data.match(/\d+/) === null &&
-                                el.firstChild.data.match('Introverts Hangout') === null) ||
-                                el.firstChild.data.match(regPattern) !== null
-                            )
-                                output += el.firstChild.data + '\n';
+                    if (el.firstChild !== null && el.firstChild != undefined)
+                        el.children.forEach((child) => {
+                            if (child.data != undefined)
+                                if (
+                                    (child.type == 'text' &&
+                                     child.data != e.guid &&
+                                     child.data.match(/^\d+/) === null &&
+                                     child.data.match('Introverts Hangout') === null
+                                    ) ||
+                                    child.data.match(regPattern) !== null
+                                )
+                                    output += child.data + '\n';
+                        });
                 });
 
                 output += '\n' + e.guid;
