@@ -36,8 +36,9 @@ module.exports = class DiscordBot {
                             if (el.firstChild.data.match(regPattern) !== null) {
                                 let datePieces = el.firstChild.data.match(regPattern);
                                 let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
-                                date.setTime( date.getTime() + 1 * 86400000); // Advance to next day.
-                                if (date.toDateString() == new Date().toDateString())
+                                let nextDay = new Date(); // Get today's date.
+                                nextDay.setTime(nextDay.getTime() + 1 * (24 * 60 * 60 * 1000)); // Advance to next day.
+                                if (date.toDateString() == nextDay.toDateString())
                                     meetupEvents.push(item);
                             }
                 });
@@ -113,6 +114,7 @@ module.exports = class DiscordBot {
                 let channel = client.channels.cache.get(config.CHANNEL_ID);
                 if (channel != undefined) {
                     console.log('Writing event "' + e.title.trim() + '"\n');
+                    //console.log(output);
                     await channel.send(output);
                 }
 
