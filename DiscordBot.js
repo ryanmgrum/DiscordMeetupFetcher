@@ -12,6 +12,33 @@ module.exports = class DiscordBot {
         this.numOfEvents = 100;
     }
 
+    /** deleteOldEvents searches the config-specified channel ID's message history for bot
+     *  messages of events that have already happened and deletes them.
+     *  It will search the message contents for the event date (using the same regex pattern used
+     *  in fetchMeetupEvents) and compare that with now to determine whether to delete the message.
+     * @param err Whether an Error occurred before calling this function.
+     */
+     deleteOldEvents(err) {
+        // First find the events to delete.
+        let deleteEvents = [];
+        let channel = client.channels.cache.get(config.CHANNEL_ID);
+        channel.messages.fetch({limit: this.numOfEvents}).then(messages => {
+            // Iterate through the messages here with the variable "messages".
+            let regPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (January|February|March|April|May|June|July|August|September|October|November|December) (\d+) at (\d+):(0\d|\d+) ([AP]M)/;
+            let now = new Date();
+            messages.forEach(message => {
+                if (message.member.user.id == '845419198917902376' /*Discord Bot's ID*/) {
+                    // Fetch date from message contents.
+                    let datePieces = message.content.match(regPattern);
+                    let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
+                    if (date - now  < 0)
+                        //console.log('Deleting ' + message.content);
+                        message.delete(); // Delete old event message.
+                }
+            });
+        });
+    }
+
     /** fetchMeetupEvents reads the RSS feed for the given Meetup group URL in config.json
      *  and adds it to an array that will be passed to addDiscordEvents. The array will only
      *  contain events that are not yet in the specified guildID's channelName.
@@ -134,7 +161,10 @@ module.exports = class DiscordBot {
         // Log client in to MeetupEventFetcher Discord bot.
         client.login(config.BOT_TOKEN).then(
             // Check for new Meetup events.
-            client.once('ready', () => {this.fetchMeetupEvents(null);})
+            client.once('ready', () => {
+                this.deleteOldEvents(null);
+                this.fetchMeetupEvents(null);
+            })
         );
     }
 
