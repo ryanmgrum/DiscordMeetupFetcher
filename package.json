@@ -1,0 +1,30 @@
+{
+  "name": "discordmeetupfetcher",
+  "version": "1.0.0",
+  "description": "A Node.js Discord bot used to fetch today's events from a Meetup group's RSS event feed and post them in a channel specified by its channel id.",
+  "main": "Runner.js",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.9",
+    "discord.js": "^12.5.3",
+    "rss-parser": "^3.12.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanmgrum/DiscordMeetupFetcher.git"
+  },
+  "keywords": [
+    "Discord",
+    "Meetup",
+    "Event"
+  ],
+  "author": "Ryan McAllister-Grum",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ryanmgrum/DiscordMeetupFetcher/issues"
+  },
+  "homepage": "https://github.com/ryanmgrum/DiscordMeetupFetcher#readme"
+}
