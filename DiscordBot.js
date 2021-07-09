@@ -63,7 +63,7 @@ module.exports = class DiscordBot {
                         if (el.firstChild.data != undefined)
                             if (el.firstChild.data.match(regPattern) !== null) {
                                 let datePieces = el.firstChild.data.match(regPattern);
-                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) === 12 ? 12 : Number(datePieces[3]) : datePieces[3]}:${datePieces[4]}`);
+                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? (Number(datePieces[3]) === 12 ? 12 : Number(datePieces[3]) + 12) : datePieces[3]}:${datePieces[4]}`);
                                 if (date.toDateString() == new Date().toDateString())
                                     meetupEvents.push(item);
                             }
