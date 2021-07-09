@@ -57,12 +57,13 @@ module.exports = class DiscordBot {
                 // Parse item's content to get the event's start date and time.
                 let $ = cheerio.load(item.content);
                 let regPattern = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (January|February|March|April|May|June|July|August|September|October|November|December) (\d+) at (\d+):(0\d|\d+) ([AP]M)/;
+                //console.log(item.content);
                 $('p').each(function(i, el) {
                     if (el.firstChild !== null)
                         if (el.firstChild.data != undefined)
                             if (el.firstChild.data.match(regPattern) !== null) {
                                 let datePieces = el.firstChild.data.match(regPattern);
-                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
+                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) === 12 ? 12 : Number(datePieces[3]) : datePieces[3]}:${datePieces[4]}`);
                                 if (date.toDateString() == new Date().toDateString())
                                     meetupEvents.push(item);
                             }
@@ -143,7 +144,7 @@ module.exports = class DiscordBot {
 
                 let channel = client.channels.cache.get(config.CHANNEL_ID);
                 if (channel != undefined) {
-                    console.log('Writing event "' + e.title.trim() + '"\n');
+                    //console.log('Writing event "' + e.title.trim() + '"\n');
                     await channel.send(output);
                 }
 
