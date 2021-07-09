@@ -30,7 +30,7 @@ module.exports = class DiscordBot {
                 if (message.member.user.id == '845419198917902376' /*Discord Bot's ID*/) {
                     // Fetch date from message contents.
                     let datePieces = message.content.match(regPattern);
-                    let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
+                    let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) === 12 ? 12 : Number(datePieces[3]) + 12 : datePieces[3]}:${datePieces[4]}`);
                     if (date - now  < 0)
                         //console.log('Deleting ' + message.content);
                         message.delete(); // Delete old event message.
@@ -62,7 +62,7 @@ module.exports = class DiscordBot {
                         if (el.firstChild.data != undefined)
                             if (el.firstChild.data.match(regPattern) !== null) {
                                 let datePieces = el.firstChild.data.match(regPattern);
-                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? Number(datePieces[3]) === 12 ? 12 : Number(datePieces[3]) : datePieces[3]}:${datePieces[4]}`);
+                                let date = new Date(`${datePieces[1]} ${datePieces[2]}, ${new Date().getFullYear()} ${datePieces[5] == 'PM' ? (Number(datePieces[3]) == 12 ? 12 : Number(datePieces[3]) + 12) : datePieces[3]}:${datePieces[4]}`);
                                 let nextDay = new Date(); // Get today's date.
                                 nextDay.setTime(nextDay.getTime() + 1 * (24 * 60 * 60 * 1000)); // Advance to next day.
                                 if (date.toDateString() == nextDay.toDateString())
@@ -142,7 +142,7 @@ module.exports = class DiscordBot {
                 if (channel != undefined) {
                     console.log('Writing event "' + e.title.trim() + '"\n');
                     //console.log(output);
-                    await channel.send(output);
+                    //await channel.send(output);
                 }
 
                 count++;
@@ -160,7 +160,7 @@ module.exports = class DiscordBot {
         client.login(config.BOT_TOKEN).then(
             // Check for new Meetup events.
             client.once('ready', () => {
-                this.deleteOldEvents(null);
+                //this.deleteOldEvents(null);
                 this.fetchMeetupEvents(null);
             })
         );
