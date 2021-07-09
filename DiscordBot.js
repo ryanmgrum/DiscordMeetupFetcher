@@ -142,7 +142,7 @@ module.exports = class DiscordBot {
                 if (channel != undefined) {
                     console.log('Writing event "' + e.title.trim() + '"\n');
                     //console.log(output);
-                    //await channel.send(output);
+                    await channel.send(output);
                 }
 
                 count++;
@@ -160,7 +160,7 @@ module.exports = class DiscordBot {
         client.login(config.BOT_TOKEN).then(
             // Check for new Meetup events.
             client.once('ready', () => {
-                //this.deleteOldEvents(null);
+                this.deleteOldEvents(null);
                 this.fetchMeetupEvents(null);
             })
         );
