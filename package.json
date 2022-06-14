@@ -4,7 +4,7 @@
   "description": "A Node.js Discord bot used to fetch today's events from a Meetup group's RSS event feed and post them in a channel specified by its channel id.",
   "main": "Runner.js",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.10",
+    "cheerio": "^1.0.0-rc.11",
     "discord.js": "^12.5.3",
     "rss-parser": "^3.12.0"
   },
