@@ -6,7 +6,7 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.11",
     "discord.js": "^12.5.3",
-    "rss-parser": "^3.12.0"
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {},
   "scripts": {
