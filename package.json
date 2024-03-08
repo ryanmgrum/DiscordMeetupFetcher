@@ -5,9 +5,11 @@
   "main": "Runner.js",
   "dependencies": {
     "bent": "^7.3.12",
-    "discord.js": "^12.5.3",
+    "discord.js": "^14.14.1",
     "moment": "^2.29.4",
-    "moment-timezone": "^0.5.43"
+    "moment-timezone": "^0.5.45",
+    "npm-check-updates": "^16.14.15",
+    "undici": "^6.7.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
