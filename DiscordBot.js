@@ -1,6 +1,10 @@
 'use strict';
-const Discord = require("discord.js"); // Used for interfacing with Discord
-const client = new Discord.Client(); // Used for interacting with Discord
+const {Client, GatewayIntentBits} = require("discord.js"); // Used for interfacing with Discord
+const client = new Client({
+    intents: [
+        GatewayIntentBits.MessageContent
+    ]
+}); // Used for interacting with Discord
 const config = require("./config.json"); // config file containing necessary information to function
 const bent = require('bent'); // Used for fetching RSS-formatted feeds
 const moment = require('moment-timezone'); // Used to easily format Date objects.
@@ -24,17 +28,21 @@ module.exports = class DiscordBot {
         }
 
         // First find the events to delete.
-        let channel = client.channels.cache.get(config.CHANNEL_ID);
-        channel.messages.fetch({limit: this.numOfEvents}).then(messages => {
-            // Iterate through the messages here with the variable "messages".
-            let yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            messages.forEach(message => {
-                if (message.member.user.id == '845419198917902376' /*Discord Bot's ID*/)
-                    if (new Date(message.createdTimestamp) - yesterday < 0)
-                        message.delete(); // Delete old event message.
-            });
-        });
+        client.channels.fetch(config.CHANNEL_ID).then(
+            channel => {
+                channel.messages.fetch({limit: this.numOfEvents}).then(
+                messages => {
+                    // Iterate through the messages here with the variable "messages".
+                    let yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    messages.forEach(message => {
+                        if (message.member.user.id == '845419198917902376' /*Discord Bot's ID*/)
+                            if (new Date(message.createdTimestamp) - yesterday < 0)
+                                message.delete(); // Delete old event message.
+                    })
+                })
+            }
+        )
     }
 
     /** fetchMeetupEvents reads the RSS feed for the given Meetup group URL in config.json
@@ -149,7 +157,7 @@ module.exports = class DiscordBot {
 
         //console.time("Discord bot runtime.");
         
-        client.setTimeout(() => {
+        setTimeout(() => {
             //console.timeEnd("Discord bot runtime.");
             this.end();
         }, 10000);
