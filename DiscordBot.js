@@ -23,19 +23,9 @@ const client = new Client({
  * @property {string} eventUrl
  * @property {string} description
  * @property {string} dateTime
- * @property {boolean} [online]
- * @property {Object} [venue]
- * @property {string} [venue.__ref]
- * @property {string} [venue.dateTime]
- * @property {string} [venue.city]
- * @property {string} [venue.state]
- * @property {string} [venue.zip]
- * @property {string} [venue.localized_country_name]
- * @property {boolean} [is_online_event]
- * @property {number} [rsvp_limit]
- * @property {Array<{name: string}>} [event_hosts]
- * @property {string} [name]
- * @property {string} [link]
+ * @property {boolean} [isOnline]
+ * @property {{ id: string }} [venue]
+ * @property {Array<{ memberId: string }>} [eventHosts]
  */
 
 module.exports = class DiscordBot {
@@ -93,16 +83,16 @@ module.exports = class DiscordBot {
     }
 
     /**
-     * Deletes old event messages previously posted by the bot if they are older than yesterday.
+     * Deletes old event messages previously posted by the bot. If force is true, deletes all event messages by the bot regardless of timestamp.
      * @param {Error|null} err - Optional error passed from previous operations.
+     * @param {boolean} [force=false] - If true, delete all event messages by the bot, otherwise only those older than yesterday.
      * @returns {void}
      */
-    deleteOldEvents(err) {
+    deleteOldEvents(err, force = false) {
         if (err) {
             console.error(err);
             return;
         }
-
         client.channels.fetch(config.CHANNEL_ID).then(channel => {
             /** @type {TextChannel} */
             const textChannel = channel;
@@ -110,10 +100,9 @@ module.exports = class DiscordBot {
                 .then(messages => {
                     let yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
-
                     messages.forEach(/** @param {Message} message */ message => {
                         if (message.author.id === config.BOT_ID) {
-                            if (new Date(message.createdTimestamp) < yesterday) {
+                            if (force || new Date(message.createdTimestamp) < yesterday) {
                                 message.delete();
                             }
                         }
@@ -164,18 +153,12 @@ module.exports = class DiscordBot {
                 }
             }
 
-            // Filter for tomorrow's events and attach full venue JSON
+            // Filter for tomorrow's events
             for (let key in apolloState) {
                 const event = apolloState[key];
                 if (event.__typename === 'Event') {
                     const eventDate = new Date(event.dateTime);
                     if (eventDate.toDateString() === tomorrow.toDateString()) {
-                        // Attach full venue JSON if available
-                        if (event.venue && event.venue.id && venuesById[event.venue.id]) {
-                            event.venue = JSON.parse(venuesById[event.venue.id]);
-                        }
-                        // Attach membersById for use in addDiscordEvents
-                        event._membersById = membersById;
                         filtered.push(event);
                         if (filtered.length >= this.numOfEvents) break;
                     }
@@ -185,7 +168,7 @@ module.exports = class DiscordBot {
             if (filtered.length === 0) {
                 console.log(tomorrow + ": Nothing new at this time.");
             } else {
-                this.addDiscordEvents(null, filtered);
+                this.addDiscordEvents(null, filtered, venuesById, membersById);
             }
 
         } catch (err) {
@@ -197,9 +180,11 @@ module.exports = class DiscordBot {
      * Posts the list of provided Meetup events to the configured Discord channel.
      * @param {Error|null} err - Optional error passed from previous operations.
      * @param {MeetupEvent[]} eventList - List of event objects to be posted to Discord.
+     * @param {Object.<string, string>} venuesById - Venue hash table.
+     * @param {Object.<string, string>} membersById - Member hash table.
      * @returns {void}
      */
-    addDiscordEvents(err, eventList) {
+    addDiscordEvents(err, eventList, venuesById = {}, membersById = {}) {
         if (err) {
             console.error(err);
             return;
@@ -208,40 +193,48 @@ module.exports = class DiscordBot {
         const channel = client.channels.cache.get(config.CHANNEL_ID);
 
         eventList.forEach(event => {
-            let output = `**${event.name}**\n\n`;
+            let output = `**${event.title}**\n\n`;
             output += `*When*: ${moment(new Date(event.dateTime)).tz("America/Chicago").format("ddd MMM Do YYYY hh:mm:ss A zz")}\n`;
 
-            if (!event.is_online_event) {
-                let addressPieces = [];
-                if (event.venue?.name) addressPieces.push(event.venue.name);
-                if (event.venue?.address) addressPieces.push(event.venue.address);
-                if (event.venue?.city) addressPieces.push(event.venue.city);
-                if (event.venue?.state) addressPieces.push(event.venue.state);
-                if (event.venue?.country) addressPieces.push(event.venue.country);
-
-                output += `*Where*: ${addressPieces.join(", ")}\n`;
+            // Venue lookup using __ref (e.g., "Venue:12345")
+            let addressPieces = [];
+            let venue = null;
+            if (event.venue && typeof event.venue.__ref === 'string') {
+                const refMatch = event.venue.__ref.match(/^Venue:(.+)$/);
+                if (refMatch && venuesById[refMatch[1]]) {
+                    venue = JSON.parse(venuesById[refMatch[1]]);
+                }
+            }
+            if (!event.isOnline) {
+                if (venue) {
+                    if (venue.name) addressPieces.push(venue.name);
+                    if (venue.address) addressPieces.push(venue.address);
+                    if (venue.city) addressPieces.push(venue.city);
+                    if (venue.state) addressPieces.push(venue.state);
+                    if (venue.country) addressPieces.push(venue.country);
+                }
+                output += `*Where*: ${addressPieces.length > 0 ? addressPieces.join(", ") : 'Unknown'}\n`;
             } else {
                 output += `*Where*: Online\n`;
             }
 
-            // RSVP slots removed as rsvp_limit is no longer available
-            // output += `*RSVP Slots Available*: ${event.rsvp_limit ?? 'N/A'}\n`;
-
             // Use eventHosts and membersById for host names
             let hostNames = [];
-            if (Array.isArray(event.eventHosts) && event._membersById) {
+            if (Array.isArray(event.eventHosts)) {
                 for (const host of event.eventHosts) {
-                    if (host.memberId && event._membersById[host.memberId]) {
-                        const member = JSON.parse(event._membersById[host.memberId]);
+                    if (host.memberId && membersById[host.memberId]) {
+                        const member = JSON.parse(membersById[host.memberId]);
                         if (member.name) hostNames.push(member.name);
                     }
                 }
             }
-            output += `*Host(s)*: ${hostNames.join(", ")}\n`;
+            output += `*Host${hostNames.length !== 1 ? 's' : ''}*: ${hostNames.join(", ")}\n`;
 
-            output += `*Description*: "${event.description ?? 'No description.'}"\n`;
+            // Add event description
+            output += `*Description*: ${event.description ? event.description : 'No description.'}\n`;
 
-            output += `*Event Link*: ${event.link || event.eventUrl}\n`;
+            // Add event link
+            output += `*Event Link*: ${event.eventUrl ? event.eventUrl : 'No link.'}\n`;
 
             channel.send(output);
         });
@@ -249,16 +242,16 @@ module.exports = class DiscordBot {
 
     /**
      * Starts the Discord bot, logging in and triggering event deletion and event posting.
+     * @param {boolean} [forceDeleteEvents=false] - If true, force delete all event messages by the bot.
      * @returns {void}
      */
-    run() {
+    run(forceDeleteEvents = false) {
         client.login(config.BOT_TOKEN).then(() => {
             client.once('ready', () => {
-                this.deleteOldEvents(null);
+                this.deleteOldEvents(null, forceDeleteEvents);
                 this.fetchMeetupEvents(null);
             });
         });
-
         setTimeout(() => this.end(), 10000);
     }
 
