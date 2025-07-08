@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, PrivacyLevel } = require('discord.js');
-const config = require("./config.json");
+const config = require("../config.json");
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,

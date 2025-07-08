@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Launch Test",
-            "program": "${workspaceFolder}/discordevent_2025.js",
+            "program": "${workspaceFolder}/tests/discordevent_2025.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
